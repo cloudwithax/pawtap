@@ -1,7 +1,5 @@
 package dev.clxud.pawtap
 
-import android.app.ActivityOptions
-import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.view.KeyEvent
@@ -47,13 +45,16 @@ class EditMappingActivity : AppCompatActivity() {
         }
         findViewById<MaterialButton>(R.id.pick).setOnClickListener {
             val displayId = displayIds[screen.selectedItemPosition]
-            val opts = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
-            try {
-                startActivityForResult(Intent(this, PickPointActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK), 1, opts.toBundle())
-            } catch (e: Exception) {
-                Toast.makeText(this, "Can't open picker on that screen — type coordinates instead", Toast.LENGTH_LONG).show()
+            val svc = PawtapService.instance
+            if (svc == null) {
+                Toast.makeText(this, "Wake up Pawtap in Accessibility settings first \uD83D\uDC3E", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
             }
+            val ok = PickerOverlay.show(svc, displayId) { x, y ->
+                xField.setText(x.toInt().toString())
+                yField.setText(y.toInt().toString())
+            }
+            if (!ok) Toast.makeText(this, "Couldn't open picker on that screen \u2014 type coordinates instead", Toast.LENGTH_LONG).show()
         }
         findViewById<MaterialButton>(R.id.save).setOnClickListener { save() }
         val delete = findViewById<MaterialButton>(R.id.delete)
@@ -86,14 +87,6 @@ class EditMappingActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 1 && resultCode == RESULT_OK && data != null) {
-            xField.setText(data.getFloatExtra("x", 0f).toInt().toString())
-            yField.setText(data.getFloatExtra("y", 0f).toInt().toString())
-        }
-    }
-
     private fun save() {
         val x = xField.text.toString().toFloatOrNull()
         val y = yField.text.toString().toFloatOrNull()
@@ -111,5 +104,10 @@ class EditMappingActivity : AppCompatActivity() {
         super.onPause()
         listening = false
         PawtapService.passthrough = false
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        PickerOverlay.dismiss()
     }
 }
