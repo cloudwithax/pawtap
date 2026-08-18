@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="#FFF5F7">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:padding="16dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="Teach a button 🐾" android:textSize="24sp" android:textStyle="bold" android:textColor="#3A1F27"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="16dp" android:text="1. Which button?" android:textStyle="bold"/>
+    <TextView android:id="@+id/keyLabel" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="(none yet)" android:textSize="20sp" android:textColor="#3A1F27"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/listen"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Listen for a button"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="16dp" android:text="2. Which screen?" android:textStyle="bold"/>
+    <Spinner android:id="@+id/screen" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="16dp" android:text="3. Where to tap?" android:textStyle="bold"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/pick"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Pick a spot on that screen"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <EditText android:id="@+id/x" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:hint="x" android:inputType="number"/>
+        <EditText android:id="@+id/y" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:hint="y" android:inputType="number"/>
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton android:id="@+id/save"
+        android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="Save"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/delete"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Delete this remap"/>
+</LinearLayout>
+</ScrollView>

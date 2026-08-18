@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Pawtap</string>
+    <string name="service_desc">Pawtap turns your RG DS buttons into little paw taps on the top or bottom screen. It needs to watch button presses and perform taps for you.</string>
+</resources>
