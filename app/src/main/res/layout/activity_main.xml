@@ -9,6 +9,9 @@
     <com.google.android.material.button.MaterialButton android:id="@+id/enableService"
         android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_marginTop="8dp" android:text="Wake up Pawtap (Accessibility)"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/update"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" android:visibility="gone" android:text="Update available"/>
     <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/enabled"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="8dp" android:text="Remaps active"/>

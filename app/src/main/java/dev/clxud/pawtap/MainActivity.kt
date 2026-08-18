@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -35,6 +36,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.add).setOnClickListener {
             startActivity(Intent(this, EditMappingActivity::class.java))
         }
+        findViewById<MaterialButton>(R.id.update).setOnClickListener { doUpdate() }
+        checkForUpdate()
         val sw = findViewById<MaterialSwitch>(R.id.enabled)
         sw.isChecked = Store.enabled(this)
         sw.setOnCheckedChangeListener { _, on -> Store.setEnabled(this, on) }
@@ -48,6 +51,41 @@ class MainActivity : AppCompatActivity() {
         val running = PawtapService.instance != null
         status.text = if (running) "🐾 Pawtap is awake and listening" else "😴 Pawtap is asleep — enable it in Accessibility settings"
         findViewById<View>(R.id.enableService).visibility = if (running) View.GONE else View.VISIBLE
+    }
+
+    private var pendingRelease: Updater.Release? = null
+
+    private fun checkForUpdate() {
+        Thread {
+            val r = Updater.check() ?: return@Thread
+            runOnUiThread {
+                pendingRelease = r
+                findViewById<MaterialButton>(R.id.update).apply {
+                    text = "\u2B06 Update to v${r.version}"
+                    visibility = View.VISIBLE
+                }
+            }
+        }.start()
+    }
+
+    private fun doUpdate() {
+        val r = pendingRelease ?: return
+        if (!Updater.canInstall(this)) {
+            Toast.makeText(this, "Allow Pawtap to install updates, then tap again", Toast.LENGTH_LONG).show()
+            startActivity(Updater.installPermissionIntent(this))
+            return
+        }
+        val btn = findViewById<MaterialButton>(R.id.update)
+        btn.isEnabled = false
+        Thread {
+            val f = Updater.download(this, r.apkUrl) { p -> runOnUiThread { btn.text = "Downloading\u2026 $p%" } }
+            runOnUiThread {
+                btn.isEnabled = true
+                if (f == null) { btn.text = "Download failed \u2014 tap to retry"; return@runOnUiThread }
+                btn.text = "\u2B06 Update to v${r.version}"
+                Updater.install(this, f)
+            }
+        }.start()
     }
 
     private fun screenLabel(displayId: Int): String {

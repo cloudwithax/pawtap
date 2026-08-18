@@ -11,9 +11,15 @@ Hold the button, the finger stays down; let go, it lifts — so it works for hol
 4. Choose **Top screen** or **Bottom screen**, then **Pick a spot on that screen** and tap where the press should land (or type x/y).
 5. Save. Toggle **Remaps active** any time to pause everything.
 
+## Updates
+Pawtap checks this repo's Releases on launch and shows an **Update to vX** button; tap it to download and install in-app.
+(First time you'll be asked to allow Pawtap to install apps.)
+
 ## How it works
 An `AccessibilityService` with `flagRequestFilterKeyEvents` catches the button and injects a touch on the chosen display via
 `dispatchGesture(GestureDescription.Builder().setDisplayId(...))`. No root needed.
+Every press/release re-issues all held fingers on that display as one multi-stroke gesture, so buttons can overlap and
+interrupt each other freely instead of a new tap cancelling the previous one.
 
 ## Building
 ```

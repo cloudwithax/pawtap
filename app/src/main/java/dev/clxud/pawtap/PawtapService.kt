@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.accessibilityservice.GestureDescription.StrokeDescription
 import android.graphics.Path
+import android.util.SparseArray
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 
@@ -12,24 +13,22 @@ class PawtapService : AccessibilityService() {
         @Volatile var instance: PawtapService? = null
         /** When true (EditMappingActivity is listening for a button), don't swallow keys. */
         @Volatile var passthrough = false
+        private const val HOLD_MS = 60_000L
     }
 
-    private var mappings = emptyMap<Int, Mapping>()
+    private class Held(val m: Mapping, var stroke: StrokeDescription)
+
+    private var mappings = SparseArray<Mapping>()
     private var enabled = true
-    private val held = HashMap<Int, StrokeDescription>()
+    private val held = LinkedHashMap<Int, Held>()   // keyCode -> finger currently down
 
-    override fun onServiceConnected() {
-        instance = this
-        reload()
-    }
-
-    override fun onDestroy() {
-        instance = null
-        super.onDestroy()
-    }
+    override fun onServiceConnected() { instance = this; reload() }
+    override fun onDestroy() { instance = null; super.onDestroy() }
 
     fun reload() {
-        mappings = Store.load(this).associateBy { it.keyCode }
+        val sa = SparseArray<Mapping>()
+        Store.load(this).forEach { sa.put(it.keyCode, it) }
+        mappings = sa
         enabled = Store.enabled(this)
     }
 
@@ -37,29 +36,46 @@ class PawtapService : AccessibilityService() {
         if (!enabled || passthrough) return false
         val m = mappings[event.keyCode] ?: return false
         when (event.action) {
-            KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) press(m)
-            KeyEvent.ACTION_UP -> release(m)
+            KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) press(event.keyCode, m)
+            KeyEvent.ACTION_UP -> release(event.keyCode)
         }
         return true
     }
 
-    private fun press(m: Mapping) {
-        val path = Path().apply { moveTo(m.x, m.y) }
-        // Long stroke marked willContinue so the finger stays down until the button is released.
-        val stroke = StrokeDescription(path, 0, 60_000, true)
-        held[m.keyCode] = stroke
-        dispatch(stroke, m.displayId)
+    private fun path(m: Mapping) = Path().apply { moveTo(m.x, m.y) }
+
+    private fun press(key: Int, m: Mapping) {
+        held.remove(key)
+        val h = Held(m, StrokeDescription(path(m), 0, HOLD_MS, true))
+        held[key] = h
+        sync(m.displayId, fresh = h, ending = null)
     }
 
-    private fun release(m: Mapping) {
-        val prev = held.remove(m.keyCode) ?: return
-        val path = Path().apply { moveTo(m.x, m.y) }
-        dispatch(prev.continueStroke(path, 0, 1, false), m.displayId)
+    private fun release(key: Int) {
+        val h = held.remove(key) ?: return
+        sync(h.m.displayId, fresh = null, ending = h)
     }
 
-    private fun dispatch(stroke: StrokeDescription, displayId: Int) {
-        val g = GestureDescription.Builder().addStroke(stroke).setDisplayId(displayId).build()
-        dispatchGesture(g, null, null)
+    /**
+     * Android cancels every in-flight gesture whenever a new one is dispatched, so each
+     * press/release re-issues ALL fingers on that display in a single gesture: held ones as
+     * continued strokes, plus the new one and/or the one being lifted.
+     */
+    private fun sync(displayId: Int, fresh: Held?, ending: Held?) {
+        val b = GestureDescription.Builder().setDisplayId(displayId)
+        for (h in held.values) {
+            if (h.m.displayId != displayId) continue
+            if (h !== fresh) h.stroke = h.stroke.continueStroke(path(h.m), 0, HOLD_MS, true)
+            b.addStroke(h.stroke)
+        }
+        if (ending != null) b.addStroke(ending.stroke.continueStroke(path(ending.m), 0, 1, false))
+        dispatchGesture(b.build(), object : GestureResultCallback() {
+            override fun onCancelled(g: GestureDescription?) {
+                // Someone else's touch (or another display's gesture) killed our fingers; forget them
+                // so the next press starts a clean stroke instead of continuing a dead one.
+                held.values.removeAll { it.m.displayId == displayId }
+            }
+        }, null)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
